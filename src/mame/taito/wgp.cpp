@@ -70,7 +70,9 @@ TODO
 
 Offer fake-dip selectable analogue steer
 
-Is piv/sprite layers rotation control at 0x600000 ?
+Verify the combined pivot/sprite ROZ raster-counter offsets and source
+surface extent. Implement the auxiliary effects controlled by ports 4/5/7
+at 0x600000; their meanings are not yet established.
 
 Verify y-zoom is correct on the stages that use it (including WGP 2
 default course). Row zoom may be hard to verify, but WGP 2 course
@@ -477,6 +479,8 @@ private:
 
 	// video-related
 	tilemap_t *m_piv_tilemap[3]{};
+	bitmap_ind16 m_roz_bitmap;
+	bitmap_ind8 m_roz_priority;
 	u16 m_piv_ctrl_reg = 0;
 	u16 m_piv_zoom[3]{};
 	u16 m_piv_scrollx[3]{};
@@ -513,8 +517,8 @@ private:
 
 	template<unsigned Offset> TILE_GET_INFO_MEMBER(get_piv_tile_info);
 
-	void draw_sprites(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect, int y_offs);
-	void piv_layer_draw(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect, int layer, int flags, u32 priority);
+	void draw_sprites(bitmap_ind16 &bitmap, bitmap_ind8 &priority_bitmap, const rectangle &cliprect, int y_offs);
+	void piv_layer_draw(bitmap_ind16 &bitmap, bitmap_ind8 &priority_bitmap, const rectangle &cliprect, int layer, int flags, u32 priority);
 	void parse_control();
 };
 
@@ -534,6 +538,10 @@ TILE_GET_INFO_MEMBER(wgp_state::get_piv_tile_info)
 
 void wgp_state::video_start()
 {
+	// Candidate finite world surface; its physical extent still needs verification.
+	m_roz_bitmap.allocate(320, 320);
+	m_roz_priority.allocate(320, 320);
+
 	m_piv_tilemap[0] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(wgp_state::get_piv_tile_info<0x0000>)), TILEMAP_SCAN_ROWS, 16, 16, 64, 64);
 	m_piv_tilemap[1] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(wgp_state::get_piv_tile_info<0x1000>)), TILEMAP_SCAN_ROWS, 16, 16, 64, 64);
 	m_piv_tilemap[2] = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(wgp_state::get_piv_tile_info<0x2000>)), TILEMAP_SCAN_ROWS, 16, 16, 64, 64);
@@ -812,7 +820,7 @@ static const u8 ylookup[16] =
 		2, 2, 3, 3,
 		2, 2, 3, 3 };
 
-void wgp_state::draw_sprites(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect, int y_offs)
+void wgp_state::draw_sprites(bitmap_ind16 &bitmap, bitmap_ind8 &priority_bitmap, const rectangle &cliprect, int y_offs)
 {
 	int i, j, k;
 //  u16 rotate = 0;
@@ -858,6 +866,9 @@ void wgp_state::draw_sprites(screen_device &screen, bitmap_ind16 &bitmap, const 
 			if (x & 0x8000)  x -= 0x10000;
 			if (y & 0x8000)  y -= 0x10000;
 
+			// Keep the existing sprite/pivot alignment in the ROZ source coordinates.
+			y += y_offs;
+
 			const int map_index = bigsprite << 1; // now we access sprite tilemap
 
 			// don't know what selects 2x2 sprites: we use a nasty kludge which seems to work
@@ -894,7 +905,7 @@ void wgp_state::draw_sprites(screen_device &screen, bitmap_ind16 &bitmap, const 
 							flipx, flipy,
 							curx, cury,
 							zx << 12, zy << 12,
-							screen.priority(), primasks[((priority >> 1) & 1)], 0);  // maybe >> 2 or 0...?
+							priority_bitmap, primasks[((priority >> 1) & 1)], 0);  // maybe >> 2 or 0...?
 				}
 			}
 			else
@@ -925,7 +936,7 @@ void wgp_state::draw_sprites(screen_device &screen, bitmap_ind16 &bitmap, const 
 							flipx, flipy,
 							curx, cury,
 							zx << 12, zy << 12,
-							screen.priority(), primasks[((priority >> 1) & 1)], 0);  // maybe >> 2 or 0...?
+							priority_bitmap, primasks[((priority >> 1) & 1)], 0);  // maybe >> 2 or 0...?
 				}
 			}
 		}
@@ -975,7 +986,7 @@ static inline void bryan2_drawscanline(bitmap_ind16 &bitmap, int x, int y, int l
 
 
 
-void wgp_state::piv_layer_draw(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect, int layer, int flags, u32 priority)
+void wgp_state::piv_layer_draw(bitmap_ind16 &bitmap, bitmap_ind8 &priority_bitmap, const rectangle &cliprect, int layer, int flags, u32 priority)
 {
 	bitmap_ind16 &srcbitmap = m_piv_tilemap[layer]->pixmap();
 	bitmap_ind8 &flagsbitmap = m_piv_tilemap[layer]->flagsmap();
@@ -1013,7 +1024,8 @@ void wgp_state::piv_layer_draw(screen_device &screen, bitmap_ind16 &bitmap, cons
 		sx += (32) * zoomx;     // may be imperfect
 
 		y_index = (m_piv_scrolly[layer] << 16);
-		y_index += (16 + min_y) * zoomy;        // may be imperfect
+		// The final ROZ stage supplies the former 16-line screen offset.
+		y_index += min_y * zoomy;
 	}
 	else    // piv tiles flipscreen n/a
 	{
@@ -1074,7 +1086,7 @@ void wgp_state::piv_layer_draw(screen_device &screen, bitmap_ind16 &bitmap, cons
 			}
 		}
 
-		bryan2_drawscanline(bitmap, 0, y, screen_width, scanline, (flags & TILEMAP_DRAW_OPAQUE) ? false : true, ROT0, screen.priority(), priority);
+		bryan2_drawscanline(bitmap, 0, y, screen_width, scanline, (flags & TILEMAP_DRAW_OPAQUE) ? false : true, ROT0, priority_bitmap, priority);
 
 		y_index += zoomy;
 	}
@@ -1125,7 +1137,10 @@ u32 wgp_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const 
 	m_tc0100scn->tilemap_update();
 
 	screen.priority().fill(0, cliprect);
-	bitmap.fill(0, cliprect);
+	bitmap.fill(m_palette->black_pen(), cliprect);
+
+	const rectangle &world_clip = m_roz_bitmap.cliprect();
+	m_roz_priority.fill(0, world_clip);
 
 	layer[0] = 0;
 	layer[1] = 1;
@@ -1137,26 +1152,40 @@ u32 wgp_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const 
 		layer[2] = 1;
 	}
 
-// We should draw the following on a 1024x1024 bitmap...
-
+	// Pivot layers and world sprites share a single rotated/zoomed surface.
 #ifdef MAME_DEBUG
+	if (m_dislayer[layer[0]] != 0)
+		m_roz_bitmap.fill(0, world_clip);
 	if (m_dislayer[layer[0]] == 0)
 #endif
-	piv_layer_draw(screen, bitmap, cliprect, layer[0], TILEMAP_DRAW_OPAQUE, 1);
+	piv_layer_draw(m_roz_bitmap, m_roz_priority, world_clip, layer[0], TILEMAP_DRAW_OPAQUE, 1);
 
 #ifdef MAME_DEBUG
 	if (m_dislayer[layer[1]] == 0)
 #endif
-	piv_layer_draw(screen, bitmap, cliprect, layer[1], 0, 2);
+	piv_layer_draw(m_roz_bitmap, m_roz_priority, world_clip, layer[1], 0, 2);
 
 #ifdef MAME_DEBUG
 	if (m_dislayer[layer[2]] == 0)
 #endif
-	piv_layer_draw(screen, bitmap, cliprect, layer[2], 0, 4);
+	piv_layer_draw(m_roz_bitmap, m_roz_priority, world_clip, layer[2], 0, 4);
 
-	draw_sprites(screen, bitmap, cliprect, 16);
+	draw_sprites(m_roz_bitmap, m_roz_priority, world_clip, 16);
 
-// ... then here we should apply rotation from m_rotate_ctrl[] to the bitmap before we draw the TC0100SCN layers on it
+	// Signed Q4 origins and inverse Q12 cosine/sine steps, converted to 16.16.
+	// Positive sine rotates the displayed world counter-clockwise.
+	const s32 incxx = s32(s16(m_rotate_ctrl[2])) * 16;
+	const s32 incxy = s32(s16(m_rotate_ctrl[3])) * 16;
+	const s32 incyx = -incxy;
+	const s32 incyy = incxx;
+
+	// Tentative raw raster-counter offsets, fitted to the board's zoom centre.
+	// Ports 4/5/7 and the precise source-surface limits remain unverified.
+	const s32 startx = s32(s16(m_rotate_ctrl[0])) * 4096 + 97 * incxx + 4 * incyx;
+	const s32 starty = s32(s16(m_rotate_ctrl[1])) * 4096 + 97 * incxy + 4 * incyy;
+	copyrozbitmap(bitmap, cliprect, m_roz_bitmap, startx, starty, incxx, incxy, incyx, incyy, false);
+
+	// The TC0100SCN HUD, windscreen and instruments do not rotate.
 	layer[0] = m_tc0100scn->bottomlayer();
 	layer[1] = layer[0] ^ 1;
 	layer[2] = 2;
@@ -1249,20 +1278,11 @@ u16 wgp_state::lan_status_r()
 
 void wgp_state::rotate_port_w(offs_t offset, u16 data)
 {
-	/* This port may be for piv/sprite layer rotation.
-
-	WGP 2 pokes a single set of values (see 2 routines from
-	$4e4a), so if this is rotation then WGP 2 *doesn't* use
-	it.
-
-	WGP pokes a wide variety of values here, which appear
-	to move up and down as rotation control words might.
-	See $ae06-d8 which pokes piv ctrl words, then pokes
-	values to this port.
-
-	There is a lookup area in the data ROM from $d0000-$da400
-	which contains sets of 4 words (used for ports 0-3).
-	NB: port 6 is not written.
+	/* Combined pivot/sprite ROZ control: ports 0/1 are signed Q4 origins,
+	   ports 2/3 are signed inverse Q12 cosine/sine steps. WGP's data ROM
+	   at $d0000-$da400 supplies these four-word records. WGP 2 normally
+	   uses a fixed transform. Port 6 is not written; ports 4/5/7 are
+	   stored but their auxiliary effects are not yet emulated.
 	*/
 
 	switch (offset)
