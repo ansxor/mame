@@ -3239,6 +3239,11 @@ ROM_END
 
 /*
     ROM Board: J9100361A ROM PCB
+
+    tcobra2 P1 shot panning is programmed by the game (MT00120). Sound CPU
+    ROM 0xc365b1 supplies pan 0x81, interpreted as hard left by the SFX
+    routine at 0xc1952e. P2 uses 0x80 at 0xc365bf, selecting the centered
+    instrument pan instead.
 */
 
 ROM_START( tcobra2 )
