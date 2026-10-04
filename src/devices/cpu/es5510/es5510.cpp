@@ -677,6 +677,10 @@ void es5510_device::device_reset() {
 	host_serial = 0;
 	sigreg = 0;
 	mulshift = 2;
+	// Discard pending results along with the RAM pipeline to keep the delay FIFO aligned.
+	alu.write_result = false;
+	mulacc.write_result = false;
+	dol_count = 0;
 	memset(&ram, 0, sizeof(ram_t));
 	memset(&ram_p, 0, sizeof(ram_t));
 	memset(&ram_pp, 0, sizeof(ram_t));
