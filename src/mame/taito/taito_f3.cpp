@@ -11,6 +11,11 @@
     rom interface and ES5505 emulator!
     Thanks to Acho A. Tang for Kirameki Star Road sound banking info!
 
+    Original game bugs:
+    - recalh: SERVICE3 in the switch test follows P1 button 2. The input
+      routine at 0x00d598 reads the same bit as P1 button 2 at 0x00d2f8
+      (MT08723). Only SERVICE1 is used to add service credits.
+
     Other Issues:
     - Find how this HW drives the CRTC and verify timing of interrupts
 
