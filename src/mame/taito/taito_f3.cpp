@@ -96,14 +96,24 @@ void taito_f3_state::f3_control_w(offs_t offset, u32 data, u32 mem_mask)
 	logerror("CPU #0 PC %06x: warning - write unmapped control address %06x %08x\n",m_maincpu->pc(),offset,data);
 }
 
+u8 taito_f3_state::sound_dpram_r(offs_t offset)
+{
+	return m_taito_en->dpram_r(offset);
+}
+
+void taito_f3_state::sound_dpram_w(offs_t offset, u8 data)
+{
+	m_taito_en->dpram_w(offset, data);
+}
+
 void taito_f3_state::sound_reset_0_w(u32 data)
 {
-	m_taito_en->audiocpu().set_input_line(INPUT_LINE_RESET, CLEAR_LINE);
+	m_taito_en->reset_w(CLEAR_LINE);
 }
 
 void taito_f3_state::sound_reset_1_w(u32 data)
 {
-	m_taito_en->audiocpu().set_input_line(INPUT_LINE_RESET, ASSERT_LINE);
+	m_taito_en->reset_w(ASSERT_LINE);
 }
 
 void taito_f3_state::sound_bankswitch_w(offs_t offset, u32 data, u32 mem_mask)
@@ -186,7 +196,7 @@ void taito_f3_state::f3_map(address_map &map)
 	map(0x630000, 0x63ffff).rw(FUNC(taito_f3_state::pivot_r), FUNC(taito_f3_state::pivot_w));
 	map(0x660000, 0x66000f).w(FUNC(taito_f3_state::control_0_w));
 	map(0x660010, 0x66001f).w(FUNC(taito_f3_state::control_1_w));
-	map(0xc00000, 0xc007ff).rw("taito_en:dpram", FUNC(mb8421_device::left_r), FUNC(mb8421_device::left_w));
+	map(0xc00000, 0xc007ff).rw(FUNC(taito_f3_state::sound_dpram_r), FUNC(taito_f3_state::sound_dpram_w));
 	map(0xc80000, 0xc80003).w(FUNC(taito_f3_state::sound_reset_0_w));
 	map(0xc80100, 0xc80103).w(FUNC(taito_f3_state::sound_reset_1_w));
 }
@@ -429,7 +439,7 @@ void taito_f3_state::machine_reset()
 {
 	/* start with sound m68k off, qtheater relies on it (otherwise main CPU tries to reset it while 68k is working with irq table vectors). */
 	if (m_taito_en)
-		m_taito_en->audiocpu().set_input_line(INPUT_LINE_RESET, ASSERT_LINE);
+		m_taito_en->reset_w(ASSERT_LINE);
 }
 
 void taito_f3_state::f3(machine_config &config)
@@ -462,9 +472,19 @@ void taito_f3_state::f3(machine_config &config)
 	/* sound hardware */
 	SPEAKER(config, "speaker", 2).front();
 
-	TAITO_EN(config, m_taito_en);
-	m_taito_en->add_route(0, "speaker", 1.0, 0);
-	m_taito_en->add_route(1, "speaker", 1.0, 1);
+	taito_en_device &taito_en(TAITO_EN(config, m_taito_en));
+	taito_en.add_route(0, "speaker", 1.0, 0);
+	taito_en.add_route(1, "speaker", 1.0, 1);
+}
+
+// Same board with the f3rt high-level sound emulation in place of the 68000/ES5505/ES5510.
+void taito_f3_state::f3_hle(machine_config &config)
+{
+	f3(config);
+
+	taito_en_hle_device &taito_en(TAITO_EN_HLE(config.replace(), m_taito_en));
+	taito_en.add_route(0, "speaker", 1.0, 0);
+	taito_en.add_route(1, "speaker", 1.0, 1);
 }
 
 /* These games reprogram the video output registers to display different scanlines,
@@ -4769,6 +4789,6 @@ GAME( 1997, popnpop,    0,        f3,      f3, taito_f3_state, init_popnpop,  RO
 GAME( 1997, popnpopj,   popnpop,  f3,      f3, taito_f3_state, init_popnpop,  ROT0,   "Taito",                  "Pop'n Pop (Ver 2.07J 1998/02/09)", 0 )
 GAME( 1997, popnpopu,   popnpop,  f3,      f3, taito_f3_state, init_popnpop,  ROT0,   "Taito",                  "Pop'n Pop (Ver 2.07A 1998/02/09)", 0 )
 
-GAME( 1998, landmakr,   0,        f3,      f3, taito_f3_state, init_landmakr, ROT0,   "Taito",                  "Land Maker (Ver 2.02O 1998/06/02)",            0 )
-GAME( 1998, landmakrj,  landmakr, f3,      f3, taito_f3_state, init_landmakr, ROT0,   "Taito",                  "Land Maker (Ver 2.01J 1998/06/01)",            0 )
-GAME( 1998, landmakrp,  landmakr, f3,      f3, taito_f3_state, init_landmkrp, ROT0,   "Taito",                  "Land Maker (Ver 2.02O 1998/06/02, prototype)", 0 ) // proto or hack/bootleg?
+GAME( 1998, landmakr,   0,        f3_hle,  f3, taito_f3_state, init_landmakr, ROT0,   "Taito",                  "Land Maker (Ver 2.02O 1998/06/02)",            0 )
+GAME( 1998, landmakrj,  landmakr, f3_hle,  f3, taito_f3_state, init_landmakr, ROT0,   "Taito",                  "Land Maker (Ver 2.01J 1998/06/01)",            0 )
+GAME( 1998, landmakrp,  landmakr, f3_hle,  f3, taito_f3_state, init_landmkrp, ROT0,   "Taito",                  "Land Maker (Ver 2.02O 1998/06/02, prototype)", 0 ) // proto or hack/bootleg?

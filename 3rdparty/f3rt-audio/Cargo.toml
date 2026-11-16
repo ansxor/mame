@@ -1,0 +1,15 @@
+# Taito F3 HLE sound board, vendored from f3-recomp (crates/f3rt-audio), plus the
+# cxx.rs bridge MAME links against. Built by the top-level makefile into
+# $(BUILDDIR)/generated/f3rt-audio before the GENie projects compile.
+
+[workspace]
+resolver = "2"
+members = ["f3rt-audio", "f3rt-audio-cxx"]
+
+[profile.release]
+opt-level = 3
+codegen-units = 1
+lto = "fat"
+# no panic = "abort": Core::validate relies on catch_unwind; cxx still aborts
+# on any panic that reaches the bridge, so nothing unwinds into MAME
+debug = false

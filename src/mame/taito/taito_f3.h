@@ -6,6 +6,7 @@
 #pragma once
 
 #include "taito_en.h"
+#include "taito_en_hle.h"
 
 #include "machine/eepromser.h"
 #include "machine/watchdog.h"
@@ -46,6 +47,7 @@ public:
 	{ }
 
 	void f3(machine_config &config);
+	void f3_hle(machine_config &config);
 	void f3_224a(machine_config &config);
 	void bubsympb(machine_config &config);
 	void f3_224b(machine_config &config);
@@ -435,7 +437,7 @@ protected:
 	bool mix_line(const Mix &gfx, mix_pix &z, pri_mode &pri, const f3_line_inf &line, const clip_plane_inf &range);
 
 private:
-	optional_device<taito_en_device> m_taito_en;
+	optional_device<taito_en_interface> m_taito_en;
 	optional_device<okim6295_device> m_oki;
 
 	optional_shared_ptr<u32> m_paletteram32;
@@ -445,6 +447,8 @@ private:
 	u32 f3_control_r(offs_t offset);
 	void f3_control_w(offs_t offset, u32 data, u32 mem_mask = ~0);
 	void f3_timer_control_w(offs_t offset, u16 data);
+	u8 sound_dpram_r(offs_t offset);
+	void sound_dpram_w(offs_t offset, u8 data);
 	void sound_reset_0_w(u32 data);
 	void sound_reset_1_w(u32 data);
 	void sound_bankswitch_w(offs_t offset, u32 data, u32 mem_mask = ~0);

@@ -913,6 +913,7 @@ def write_project(options, projectfile, mappings, sources, single):
                 '        MAME_DIR .. "src/lib/netlist",\n' \
                 '        MAME_DIR .. "3rdparty",\n' \
                 '        GEN_DIR  .. "mame/layout",\n' \
+                '        GEN_DIR  .. "f3rt-audio/cxxbridge",\n' \
                 '        ext_includedir("asio"),\n' \
                 '        ext_includedir("flac"),\n' \
                 '        ext_includedir("glm"),\n' \
@@ -965,6 +966,7 @@ def write_project(options, projectfile, mappings, sources, single):
                 '        MAME_DIR .. "src/lib/netlist",\n' \
                 '        MAME_DIR .. "3rdparty",\n' \
                 '        GEN_DIR  .. "mame/layout",\n' \
+                '        GEN_DIR  .. "f3rt-audio/cxxbridge",\n' \
                 '        ext_includedir("asio"),\n' \
                 '        ext_includedir("flac"),\n' \
                 '        ext_includedir("glm"),\n' \

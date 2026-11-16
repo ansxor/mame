@@ -37,6 +37,8 @@
 !/.gitignore
 !/.travis.yml
 !/makefile
+!/flake.nix
+!/flake.lock
 !/mame.doxygen
 !/*.md
 !/*.bdf

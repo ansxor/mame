@@ -18,8 +18,22 @@
 #include "sound/esqpump.h"
 #include "sound/mb87077.h"
 
-class taito_en_device : public device_t, public device_mixer_interface
+// What the host board sees of the Taito Ensoniq sound board: the main-CPU side of the shared
+// MB8421 mailbox, the sound CPU reset line and the sound program bank. Implemented by the
+// low-level taito_en_device and by the HLE taito_en_hle_device.
+class taito_en_interface : public device_interface
+{
+public:
+	virtual u8 dpram_r(offs_t offset) = 0;
+	virtual void dpram_w(offs_t offset, u8 data) = 0;
+	virtual void reset_w(int state) = 0;
+	virtual void set_bank(int bank, int entry) = 0;
 
+protected:
+	taito_en_interface(const machine_config &mconfig, device_t &device) : device_interface(device, "taito_en") { }
+};
+
+class taito_en_device : public device_t, public device_mixer_interface, public taito_en_interface
 {
 public:
 	static constexpr feature_type imperfect_features() { return feature::SOUND; }
@@ -28,7 +42,11 @@ public:
 
 	m68000_device &audiocpu() { return *m_audiocpu; }
 
-	void set_bank(int bank, int entry) { m_cpubank[bank]->set_entry(entry); }
+	// taito_en_interface
+	virtual u8 dpram_r(offs_t offset) override { return m_dpram->left_r(offset); }
+	virtual void dpram_w(offs_t offset, u8 data) override { m_dpram->left_w(offset, data); }
+	virtual void reset_w(int state) override { m_audiocpu->set_input_line(INPUT_LINE_RESET, state ? ASSERT_LINE : CLEAR_LINE); }
+	virtual void set_bank(int bank, int entry) override { m_cpubank[bank]->set_entry(entry); }
 
 protected:
 	// device-level overrides
@@ -48,6 +66,7 @@ private:
 	required_device<esq_5505_5510_pump_device> m_pump;
 	required_device<mc68681_device> m_duart68681;
 	required_device<mb87078_device> m_mb87078;
+	required_device<mb8421_device> m_dpram;
 
 	required_shared_ptr<uint16_t> m_osram;
 	required_shared_ptr<uint16_t> m_otisbank;

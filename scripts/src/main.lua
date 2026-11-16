@@ -123,6 +123,10 @@ end
 
 if (STANDALONE~=true) then
 	findfunction("linkProjects_" .. _OPTIONS["target"] .. "_" .. _OPTIONS["subtarget"])(_OPTIONS["target"], _OPTIONS["subtarget"])
+	-- f3rt-audio (built by the makefile's f3rt_audio target); after the driver libraries that use it
+	links {
+		GEN_DIR .. "f3rt-audio/release/libf3rt_audio_cxx.a",
+	}
 end
 if (STANDALONE~=true) then
 	links {

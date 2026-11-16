@@ -1522,8 +1522,21 @@ $(GEN_FOLDERS):
 
 genie: $(GENIE)
 
+#-------------------------------------------------
+# f3rt-audio: Taito F3 HLE sound board (Rust, cxx.rs bridge)
+# produces $(GENDIR)/f3rt-audio/release/libf3rt_audio_cxx.a and
+# the bridge headers under $(GENDIR)/f3rt-audio/cxxbridge
+#-------------------------------------------------
+
+CARGO ?= cargo
+
+.PHONY: f3rt_audio
+f3rt_audio:
+	$(SILENT) CC="$(TOOLCHAIN)$(subst @,,$(CC))" CXX="$(TOOLCHAIN)$(subst @,,$(CXX))" $(CARGO) build --release --locked --manifest-path 3rdparty/f3rt-audio/Cargo.toml --target-dir $(GENDIR)/f3rt-audio
+
 generate: \
 		genie \
+		f3rt_audio \
 		$(GEN_FOLDERS) \
 		$(GENDIR)/version.cpp \
 		$(patsubst %.po,%.mo,$(call rwildcard, language/, *.po)) \

@@ -1,0 +1,15 @@
+[package]
+name = "f3rt-audio-cxx"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+cxx = "1.0"
+f3rt-audio = { path = "../f3rt-audio" }
+
+[build-dependencies]
+cxx-build = "1.0"
