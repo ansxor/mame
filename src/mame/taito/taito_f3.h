@@ -8,6 +8,8 @@
 #include "taito_en.h"
 #include "taito_en_hle.h"
 
+#include "cpu/m68000/m68kdrc.h"
+
 #include "machine/eepromser.h"
 #include "machine/watchdog.h"
 #include "sound/okim6295.h"
@@ -166,7 +168,7 @@ protected:
 
 	TIMER_CALLBACK_MEMBER(trigger_int3);
 
-	required_device<cpu_device> m_maincpu;
+	required_device<m68ec020drc_device> m_maincpu;
 	optional_device<watchdog_timer_device> m_watchdog;
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<screen_device> m_screen;

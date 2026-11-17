@@ -20,6 +20,9 @@ public:
 
 	// device-level overrides
 	virtual void device_start() override ATTR_COLD;
+
+protected:
+	m68ec020_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock, device_type type);
 };
 
 class m68020_device : public m68000_musashi_device

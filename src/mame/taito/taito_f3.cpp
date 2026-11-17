@@ -29,7 +29,7 @@
 #include "emu.h"
 #include "taito_f3.h"
 
-#include "cpu/m68000/m68020.h"
+#include "cpu/m68000/m68kdrc.h"
 #include "sound/es5506.h"
 #include "sound/okim6295.h"
 
@@ -432,6 +432,11 @@ void taito_f3_state::machine_start()
 {
 	m_interrupt3_timer = timer_alloc(FUNC(taito_f3_state::trigger_int3), this);
 
+	// program ROM and work RAM are plain memory the recompiler may access directly
+	address_space &program = m_maincpu->space(AS_PROGRAM);
+	m_maincpu->add_fastram(0x000000, 0x1fffff, true, program.get_read_ptr(0x000000));
+	m_maincpu->add_fastram(0x400000, 0x41ffff, false, program.get_write_ptr(0x400000), 0x20000);
+
 	save_item(NAME(m_coin_word));
 }
 
@@ -445,7 +450,7 @@ void taito_f3_state::machine_reset()
 void taito_f3_state::f3(machine_config &config)
 {
 	/* basic machine hardware */
-	M68EC020(config, m_maincpu, F3_MAIN_CLK);
+	M68EC020DRC(config, m_maincpu, F3_MAIN_CLK);
 	m_maincpu->set_addrmap(AS_PROGRAM, &taito_f3_state::f3_map);
 	m_maincpu->set_vblank_int("screen", FUNC(taito_f3_state::interrupt2));
 
@@ -543,7 +548,7 @@ GFXDECODE_END
 void taito_f3_state::bubsympb(machine_config &config)
 {
 	/* basic machine hardware */
-	M68EC020(config, m_maincpu, F3_MAIN_CLK);
+	M68EC020DRC(config, m_maincpu, F3_MAIN_CLK);
 	m_maincpu->set_addrmap(AS_PROGRAM, &taito_f3_state::bubsympb_map);
 	m_maincpu->set_vblank_int("screen", FUNC(taito_f3_state::interrupt2));
 

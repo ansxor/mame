@@ -100,7 +100,12 @@ void m68020hmmu_device::device_start()
 
 
 m68ec020_device::m68ec020_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: m68000_musashi_device(mconfig, tag, owner, clock, M68EC020, 32,24)
+	: m68ec020_device(mconfig, tag, owner, clock, M68EC020)
+{
+}
+
+m68ec020_device::m68ec020_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock, device_type type)
+	: m68000_musashi_device(mconfig, tag, owner, clock, type, 32,24)
 {
 }
 
